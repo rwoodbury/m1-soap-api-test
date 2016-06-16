@@ -1,0 +1,16 @@
+{
+    "name": "rwoodbury/m1-soap-api-test",
+    "description": "Base framework for testing M1 SOAP API.",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Reid Woodbury",
+            "email": "rwoodbury@magento.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5",
+    	"phpunit/phpunit": "4.8.*",
+        "magento/zendframework1": "1.12.*"
+    }
+}
