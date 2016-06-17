@@ -11,6 +11,7 @@
     "require": {
         "php": ">=5.5",
     	"phpunit/phpunit": "4.8.*",
-        "magento/zendframework1": "1.12.*"
+        "zendframework/zend-config": "2.4.*",
+        "zendframework/zend-soap": "2.4.*"
     }
 }
