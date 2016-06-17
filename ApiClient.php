@@ -2,35 +2,39 @@
 
 class ApiClient
 {
-	protected static $_method;
+	protected static $_encoding;
 	protected static $_client;
 	protected static $_session;
 
-	public function __construct()
+	/**
+	 * @param string $configFile
+	 */
+	public function __construct($configFile)
 	{
 		if ( isset(self::$_client) ) {
 			throw new LogicException('Connection already created to deployment instance.');
 		}
 
 		try {
-			$config = Zend\Config\Factory::fromFile('config.php', true);
+			$config = Zend\Config\Factory::fromFile($configFile, true);
 		}
 		catch ( Exception $e ) {
 			echo $e->__toString(), "\n";
 			echo "Copy 'config.example.php' to 'config.php' then add your settings.\n";
 		}
 
-		self::$_method = strtolower($config->method);
+		self::$_encoding = strtolower($config->encoding);
 
-		switch ( self::$_method ) {
+		switch ( self::$_encoding ) {
 			case 'soap':
-			self::$_client = new Zend\Soap\Client($config->host . '/api/?wsdl');
+// 			self::$_client = new Zend\Soap\Client($config->host . '/api/?wsdl');
+			self::$_client = new SoapClient($config->host . '/api/?wsdl');
 			self::$_session = self::$_client->login($config->user, $config->key);
 			break;
 
 // 			case 'xml-rpc':
 // 			case 'xmlrpc':
-// 			self::$_method = 'xmlrpc';
+// 			self::$_encoding = 'xmlrpc';
 // 			self::$_client = new Zend\XmlRpc\Client($config->host . '/api/xmlrpc');
 // 			self::$_session = self::$_client->call('login', [$config->user, $config->key]);
 // 			break;
@@ -48,10 +52,11 @@ class ApiClient
 	/**
 	 * @param string $method
 	 * @param scalar|array $args -OPTIONAL
+	 * @return mixed
 	 */
 	static function call($method, $args=null)
 	{
-		if ( self::$_method === 'soap' ) {
+		if ( self::$_encoding === 'soap' ) {
 			if ( $args === null ) {
 				return self::$_client->call(self::$_session, $method);
 			}
@@ -64,5 +69,23 @@ class ApiClient
 // 		}
 
 		throw new LogicException('bad type for "args"');
+	}
+
+	/**
+	 * @param string $method
+	 * @param array $args -OPTIONAL
+	 * @return mixed
+	 */
+	static function __callStatic($method, $args=null)
+	{
+		return self::$_client->__soapCall($method, $args);
+	}
+
+	/**
+	 * @return string
+	 */
+	static function getSession()
+	{
+		return self::$_session;
 	}
 }
