@@ -42,7 +42,7 @@ class ApiClient
 
 	public function __destruct()
 	{
-		self::$_client->endSession($session);
+		self::$_client->endSession(self::$_session);
 	}
 
 	/**
