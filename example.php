@@ -1,4 +1,10 @@
 <?php
 
+//	Print a list of available API method calls.
 $res = ApiClient::resources(ApiClient::getSession());
-var_dump($result);
+// print_r($res);
+foreach ( $res as $r ) {
+	foreach ( $r['methods'] as $m ) {
+		pout($m['path'] . PHP_EOL);
+	}
+}
