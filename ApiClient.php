@@ -1,5 +1,24 @@
 <?php
 
+/**
+ * This class simplifies the setup and usage of the Magento 1 WEB API. It
+ *		enforces that there be only one connection available for the run
+ *		of the test script.
+ *
+ * For example, where the Magento manual defines a call like this:
+ *		$client = new SoapClient('http://magentohost/api/soap/?wsdl');
+ *		$session = $client->login('apiUser', 'apiKey');
+ * 		$result = $client->call($session, 'catalog_product.info', '4');
+ *
+ * the usage in the user's scripts will be the more straight forward:
+ *		$result = ApiClient::call('catalog_product.info', '4');
+ *
+ * Even support methods like:
+ *		$result = $client->resources($session);
+ *
+ * will be called with:
+ *		$result = ApiClient::resources(ApiClient::getSession());
+ */
 class ApiClient
 {
 	protected static $_encoding;
@@ -19,8 +38,8 @@ class ApiClient
 			$config = Zend\Config\Factory::fromFile($configFile, true);
 		}
 		catch ( Exception $e ) {
-			echo $e->__toString(), "\n";
-			echo "Copy 'config.example.php' to 'config.php' then add your settings.\n";
+			perr( $e->__toString() . "\n" );
+			perr( "Copy 'config.example.php' to 'config.php' then add your settings.\n" );
 		}
 
 		self::$_encoding = strtolower($config->encoding);
@@ -60,6 +79,9 @@ class ApiClient
 			if ( $args === null ) {
 				return self::$_client->call(self::$_session, $method);
 			}
+			elseif ( is_scalar($args) ) {
+				return self::$_client->call(self::$_session, $method, [$args]);
+			}
 			elseif ( is_array($args) ) {
 				return self::$_client->call(self::$_session, $method, $args);
 			}
@@ -78,7 +100,12 @@ class ApiClient
 	 */
 	static function __callStatic($method, $args=null)
 	{
-		return self::$_client->__soapCall($method, $args);
+		if ( self::$_encoding === 'soap' ) {
+			return self::$_client->__soapCall($method, $args);
+		}
+// 		else {
+// 			;
+// 		}
 	}
 
 	/**
