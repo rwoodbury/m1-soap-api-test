@@ -21,42 +21,30 @@
  */
 class ApiClient
 {
-	protected static $_encoding;
-	protected static $_client;
-	protected static $_session;
+	protected $_encoding;
+	protected $_client;
+	protected $_session;
 
 	/**
 	 * @param string $configFile
 	 */
-	public function __construct($configFile)
+	public function __construct(\Zend\Config\Config $config)
 	{
-		if ( isset(self::$_client) ) {
-			throw new LogicException('Connection already created to deployment instance.');
-		}
+		$this->_encoding = strtolower($config->encoding);
 
-		try {
-			$config = Zend\Config\Factory::fromFile($configFile, true);
-		}
-		catch ( Exception $e ) {
-			perr( $e->__toString() . "\n" );
-			perr( "Copy 'config.example.php' to 'config.php' then add your settings.\n" );
-		}
-
-		self::$_encoding = strtolower($config->encoding);
-
-		switch ( self::$_encoding ) {
+		switch ( $this->_encoding ) {
 			case 'soap':
-// 			self::$_client = new Zend\Soap\Client($config->host . '/api/?wsdl');
-			self::$_client = new SoapClient($config->host . '/api/?wsdl');
-			self::$_session = self::$_client->login($config->user, $config->key);
+			$this->_client = new SoapClient($config->host . '/api/soap/?wsdl');
+			$this->_session = $this->_client->login($config->user, $config->key);
 			break;
 
-// 			case 'xml-rpc':
-// 			case 'xmlrpc':
-// 			self::$_encoding = 'xmlrpc';
-// 			self::$_client = new Zend\XmlRpc\Client($config->host . '/api/xmlrpc');
-// 			self::$_session = self::$_client->call('login', [$config->user, $config->key]);
-// 			break;
+			case 'xml-rpc':
+			case 'xmlrpc':
+			$this->_encoding = 'xmlrpc';
+			$this->_client = new Zend\XmlRpc\Client($config->host . '/api/xmlrpc');
+// 			print_r($this->_client->getIntrospector()->listMethods());
+// 			$this->_session = $this->_client->call('login', [$config->user, $config->key]);
+			break;
 
 			default:
 			throw new UnexpectedValueException('unknown connection method: ' . $config->method);
@@ -65,7 +53,28 @@ class ApiClient
 
 	public function __destruct()
 	{
-		self::$_client->endSession(self::$_session);
+		if ( $this->_encoding === 'soap' ) {
+			$this->_client->endSession($this->_session);
+		}
+		else {
+			;
+		}
+	}
+
+	/**
+	 * @return SoapClient|Zend\XmlRpc\Client
+	 */
+	function getClient()
+	{
+		return $this->_client;
+	}
+
+	/**
+	 * @return string
+	 */
+	function getSession()
+	{
+		return $this->_session;
 	}
 
 	/**
@@ -73,46 +82,36 @@ class ApiClient
 	 * @param scalar|array $args -OPTIONAL
 	 * @return mixed
 	 */
-	static function call($method, $args=null)
+	function __call($method, $args=null)
 	{
-		if ( self::$_encoding === 'soap' ) {
-			if ( $args === null ) {
-				return self::$_client->call(self::$_session, $method);
-			}
-			elseif ( is_scalar($args) ) {
-				return self::$_client->call(self::$_session, $method, [$args]);
-			}
-			elseif ( is_array($args) ) {
-				return self::$_client->call(self::$_session, $method, $args);
-			}
-		}
-// 		else {
-// 			;
-// 		}
-
-		throw new LogicException('bad type for "args"');
+		$this->call($method, $args);
 	}
 
 	/**
+	 * Magento methods, or messages, will have a period in their name
+	 * so it must be passed as a string.
+	 *
 	 * @param string $method
-	 * @param array $args -OPTIONAL
+	 * @param scalar|array $args -OPTIONAL
 	 * @return mixed
 	 */
-	static function __callStatic($method, $args=null)
+	function call($method, $args=null)
 	{
-		if ( self::$_encoding === 'soap' ) {
-			return self::$_client->__soapCall($method, $args);
+		if ( $this->_encoding === 'soap' ) {
+			if ( $args === null ) {
+				return $this->_client->call($this->_session, $method);
+			}
+			elseif ( is_scalar($args) ) {
+				return $this->_client->call($this->_session, $method, [$args]);
+			}
+			elseif ( is_array($args) ) {
+				return $this->_client->call($this->_session, $method, $args);
+			}
 		}
-// 		else {
-// 			;
-// 		}
-	}
+		else {
+			;
+		}
 
-	/**
-	 * @return string
-	 */
-	static function getSession()
-	{
-		return self::$_session;
+		throw new LogicException('bad type for "args"');
 	}
 }

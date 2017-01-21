@@ -21,33 +21,29 @@ set_error_handler(
 	E_USER_ERROR
 );
 
-/**
- * Set handler for uncaught exceptions.
- */
-set_exception_handler(
-	function ( Exception $e ) {
-// 		perr( $e->getMessage() . PHP_EOL );
-		perr( $e . PHP_EOL );
-		exit( $e->getCode() );
-	}
-);
-
 require_once __DIR__ . '/vendor/autoload.php';
 
-//	This keeps the API connection open until the script is finnished.
-//	The static "ApiClient::call" can then be used anywhere without a global declaration.
-require 'ApiClient.php';
-$_clientSessionHandler = new ApiClient(__DIR__ . '/config.php');
+try {
+	$config = \Zend\Config\Factory::fromFile(__DIR__ . '/config.php', true);
+}
+catch ( Exception $e ) {
+	perr( $e->__toString() . "\n" );
+	perr( "Copy 'config.example.php' to 'config.php' then add your settings.\n" );
+}
 
-$filesToIgnore = [
-	'ApiClient.php',
-	'config.example.php',
-	'config.php',
-	'run.php'
-];
+try {
+	//	This keeps the API connection open until the script is finnished.
+	//	The static "ApiClient::call" can then be used anywhere without a global declaration.
+	require __DIR__ . '/ApiClient.php';
+	$apiClient = new ApiClient($config);
 
-foreach ( glob(__DIR__ . '/*.php', GLOB_MARK) as $f ) {
-	if ( substr($f, -1) !== '/' && !in_array( basename($f), $filesToIgnore) ) {
-		include $f;
+	foreach ( glob(__DIR__ . '/tests/*.php', GLOB_MARK) as $f ) {
+		if ( substr($f, -1) !== '/') {
+			include $f;
+		}
 	}
+}
+catch ( Exception $e ) {
+	perr( $e . PHP_EOL );
+	exit( $e->getCode() );
 }
