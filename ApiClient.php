@@ -30,34 +30,39 @@ class ApiClient
 	 */
 	public function __construct(\Zend\Config\Config $config)
 	{
-		$this->_encoding = strtolower($config->encoding);
-
-		switch ( $this->_encoding ) {
+		switch ( strtolower($config->encoding) ) {
 			case 'soap':
+			$this->_encoding = 'soap';
 			$this->_client = new SoapClient($config->host . '/api/soap/?wsdl');
+			$this->_session = $this->_client->login($config->user, $config->key);
+			break;
+
+			case 'v2soap':
+			case 'soapv2':
+			$this->_encoding = 'soapv2';
+			$this->_client = new SoapClient($config->host . '/api/v2_soap/?wsdl=1');
 			$this->_session = $this->_client->login($config->user, $config->key);
 			break;
 
 			case 'xml-rpc':
 			case 'xmlrpc':
 			$this->_encoding = 'xmlrpc';
-			$this->_client = new Zend\XmlRpc\Client($config->host . '/api/xmlrpc');
+// 			$this->_client = new Zend\XmlRpc\Client($config->host . '/api/xmlrpc');
 // 			print_r($this->_client->getIntrospector()->listMethods());
 // 			$this->_session = $this->_client->call('login', [$config->user, $config->key]);
 			break;
 
 			default:
-			throw new UnexpectedValueException('unknown connection method: ' . $config->method);
+			throw new UnexpectedValueException('unknown encoding: ' . $config->method);
 		}
 	}
 
 	public function __destruct()
 	{
-		if ( $this->_encoding === 'soap' ) {
+		switch ( $this->_encoding ) {
+			case 'soap':
+			case 'soapv2':
 			$this->_client->endSession($this->_session);
-		}
-		else {
-			;
 		}
 	}
 
@@ -97,7 +102,8 @@ class ApiClient
 	 */
 	function call($method, $args=null)
 	{
-		if ( $this->_encoding === 'soap' ) {
+		switch ( $this->_encoding ) {
+			case 'soap':
 			if ( $args === null ) {
 				return $this->_client->call($this->_session, $method);
 			}
@@ -107,11 +113,13 @@ class ApiClient
 			elseif ( is_array($args) ) {
 				return $this->_client->call($this->_session, $method, $args);
 			}
-		}
-		else {
-			;
+
+			case 'soapv2':
+			return $this->_client->{$method}($this->_session, $args);
+
+			default:
 		}
 
-		throw new LogicException('bad type for "args"');
+		throw new LogicException('bad encoding or type for "args" ');
 	}
 }
