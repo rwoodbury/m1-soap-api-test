@@ -47,3 +47,6 @@ catch ( Exception $e ) {
 	perr( $e . PHP_EOL );
 	exit( $e->getCode() );
 }
+
+unset($apiClient);
+pout(PHP_EOL);
